@@ -44,7 +44,6 @@ async function main() {
       const comment = _comment
         ? new CommentModel(bot.getClient, _comment)
         : null;
-      if (post.raw.username !== config.discuit.username) return;
 
       const genId = Math.random().toString(36).substring(2, 15);
       const gidText = ascii.dim(`[${genId}]`);

@@ -76,6 +76,7 @@ export class DiscuitBot {
     server.on(Topic.NEW_COMMENT, async (message: Comment) => {
       const comment = new CommentModel(this.client, message);
       if (!comment.raw.body.includes(config.discuit.username)) return;
+      if (comment.raw.username === config.discuit.username) return;
 
       const postId = comment.raw.postPublicId;
 
