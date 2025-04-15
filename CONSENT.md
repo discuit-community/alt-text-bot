@@ -1,8 +1,8 @@
 # alt text bot consent
 
-**opt in**  -add `<!-- altbot:opt-in -->` to your user “about me” or your community’s description.
+**opt in:** add `<!-- altbot:opt-in -->` to your user “about me” or your community’s description.
 
-**opt out** - just remove that line. changes happen right away, but won’t stop anything already started.
+**opt out:** just remove that line. changes happen right away, but won’t stop anything already started.
 
 **when do i generate alt text?**
 
