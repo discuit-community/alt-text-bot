@@ -1,10 +1,16 @@
-import type { Post, Image } from "@discuit-community/types";
+import type {
+  Post,
+  Image,
+  APIError,
+  Community,
+} from "@discuit-community/types";
 import { loadConfig } from "./utils/config";
 import { DiscuitBot } from "./discuit";
 import { LlmService } from "./llm";
 import { PostModel } from "@discuit-community/client";
 import log from "./utils/log";
 import ascii from "./utils/ascii";
+import checkConsent from "./utils/permissions";
 
 async function main() {
   try {
@@ -41,6 +47,46 @@ async function main() {
         url: post.url,
         genId,
       });
+
+      const communityResult = await fetch(
+        `https://discuit.org/api/communities/${post.raw.communityName}?byName=true`,
+      );
+      const community = (await communityResult.json()) as
+        | APIError
+        | Community
+        | null;
+      if ("status" in community) {
+        log("error fetching community", {
+          status: String(community.status),
+          message: community.message,
+          code: community.code ? String(community.code) : "undefined",
+        });
+        return;
+      }
+      if (!community) {
+        log("community not found", {
+          communityName: post.raw.communityName,
+        });
+        return;
+      }
+
+      if (!post.raw.author || !community) {
+        log("missing author or community", {
+          user: post.raw.author ? post.raw.author.username : "unknown",
+          communityName: community ? community.name : "unknown",
+        });
+        return;
+      }
+      const consent = checkConsent(post.raw.author, community);
+
+      log(`consent check: ${consent ? "succeeded" : "failed"}`, {
+        username: post.raw.username,
+        communityName: post.raw.communityName,
+        userConsent: consent.user ? "yes" : "no",
+        communityConsent: consent.community ? "yes" : "no",
+      });
+
+      if (!consent.user || !consent.community) return;
 
       try {
         const descriptions = await Promise.all(
