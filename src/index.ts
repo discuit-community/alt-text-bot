@@ -3,11 +3,12 @@ import type {
   Image,
   APIError,
   Community,
+  Comment,
 } from "@discuit-community/types";
 import { loadConfig } from "./utils/config";
 import { DiscuitBot } from "./discuit";
 import { LlmService } from "./llm";
-import { PostModel } from "@discuit-community/client";
+import { CommentModel, PostModel } from "@discuit-community/client";
 import log from "./utils/log";
 import ascii from "./utils/ascii";
 import checkConsent from "./utils/permissions";
@@ -34,8 +35,15 @@ async function main() {
     console.log(`     logged in as ${loginResult.username}`);
     console.log();
 
-    const handleNewImagePost = async (_post: Post, images: Image[]) => {
+    const handleNewImagePost = async (
+      _post: Post,
+      images: Image[],
+      _comment?: Comment,
+    ) => {
       const post = new PostModel(bot.getClient, _post);
+      const comment = _comment
+        ? new CommentModel(bot.getClient, _comment)
+        : null;
       if (post.raw.username !== config.discuit.username) return;
 
       const genId = Math.random().toString(36).substring(2, 15);
@@ -81,14 +89,23 @@ async function main() {
       }
       const consent = checkConsent(post.raw.author, community);
 
-      log(`consent check: ${consent ? "succeeded" : "failed"}`, {
+      log(`consent check: (u:${consent.user} c:${consent.community})`, {
         username: post.raw.username,
         communityName: post.raw.communityName,
         userConsent: consent.user ? "yes" : "no",
         communityConsent: consent.community ? "yes" : "no",
       });
 
-      if (!consent.user || !consent.community) return;
+      if (comment && !consent.user) {
+        await comment.reply(
+          `@${post.raw.username} has not opted into alt text generation.`,
+        );
+        return;
+      }
+
+      if (!comment && (!consent.community || !consent.user)) {
+        return;
+      }
 
       try {
         const descriptions = await Promise.all(
