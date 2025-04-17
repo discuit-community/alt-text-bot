@@ -12,6 +12,7 @@ export interface Config {
     apiKey: string;
     model: string;
   };
+  altTextDelayMs?: number;
 }
 
 export function loadConfig(): Config {

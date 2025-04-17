@@ -90,8 +90,6 @@ export class LlmService {
         title: post.title,
       });
 
-      console.log(systemPrompt);
-
       console.log(`${gidText} sending request to llm provider...`);
       const response = await this.openai.chat.completions.create({
         model: this.model,
