@@ -13,6 +13,8 @@ import log from "./utils/log";
 import ascii from "./utils/ascii";
 import checkConsent from "./utils/permissions";
 
+const DEV_MODE = Bun.env.NODE_ENV === "development";
+
 async function main() {
   try {
     const config = loadConfig();
@@ -28,12 +30,12 @@ async function main() {
 
       log("failed to log in", errorInfo, {
         logLevel: "error",
+        trailingNewline: true,
       });
       return;
     }
 
-    console.log(`     logged in as ${loginResult.username}`);
-    console.log();
+    console.log(`logged in as @${loginResult.username}`);
 
     const handleNewImagePost = async (
       _post: Post,
@@ -54,6 +56,8 @@ async function main() {
         url: post.url,
         genId,
       });
+
+      if (DEV_MODE && post.raw.username !== config.discuit.username) return;
 
       // TODO: Use getCommunity method on DiscuitClient when available
       const communityResult = await fetch(
@@ -86,7 +90,10 @@ async function main() {
         });
         return;
       }
-      const consent = checkConsent(post.raw.author, community);
+
+      const consent = DEV_MODE
+        ? { user: true, community: true }
+        : checkConsent(post.raw.author, community);
 
       log(`consent check: (u:${consent.user} c:${consent.community})`, {
         username: post.raw.username,
@@ -109,7 +116,12 @@ async function main() {
       try {
         const descriptions = await Promise.all(
           images.map(async (image, index) => {
-            const result = await llm.analyzeImage(image, `${genId}-${index}`);
+            const result = await llm.analyzeImage(
+              image,
+              `${genId}-${index}`,
+              post.raw,
+              community,
+            );
             return result.altText;
           }),
         );

@@ -6,10 +6,10 @@ import {
 } from "@discuit-community/client";
 import { Jetstream, Topic } from "@discuit-community/jetstream";
 import type { Comment, Post, Image, User } from "@discuit-community/types";
-import log from "./utils/log";
+import type { APIError } from "openai";
 
 import { type Config, loadConfig } from "./utils/config";
-import type { APIError } from "openai";
+import log from "./utils/log";
 
 const config = loadConfig();
 
@@ -22,13 +22,9 @@ export class DiscuitBot {
       baseUrl: config.discuit.baseUrl,
     });
 
-    log(
-      "discuitbot initialized",
-      {
-        baseUrl: config.discuit.baseUrl,
-      },
-      { trailingNewline: false },
-    );
+    log("discuitbot initialized", {
+      baseUrl: config.discuit.baseUrl,
+    });
   }
 
   get getClient() {

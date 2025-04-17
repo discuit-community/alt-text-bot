@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "start": "bun src/index.ts",
-    "dev": "bun --watch src/index.ts"
+    "dev": "NODE_ENV=development bun --watch src/index.ts"
   },
   "devDependencies": {
     "@types/bun": "latest"
@@ -17,8 +17,8 @@
   },
   "dependencies": {
     "@discuit-community/client": "^0.3.3",
-    "@discuit-community/jetstream": "^0.2.2",
+    "@discuit-community/jetstream": "^0.3.0",
     "@discuit-community/types": "^0.1.1",
-    "openai": "^4.93.0"
+    "openai": "^4.94.0"
   }
 }

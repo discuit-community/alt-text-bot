@@ -1,9 +1,27 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import OpenAI from "openai";
+
 import { type Config } from "./utils/config";
 import type { ImageAnalysisResult } from "./types";
-import type { Image } from "@discuit-community/types";
+import type { Community, Image, Post } from "@discuit-community/types";
+
 import log from "./utils/log";
 import ascii from "./utils/ascii";
+
+function fillPrompt(template: string, vars: Record<string, string>) {
+  return template.replace(/{{(.*?)}}/g, (_, key) => vars[key.trim()] ?? "");
+}
+
+const systemTemplate = readFileSync(
+  join(import.meta.dir, "../prompts/system.txt"),
+  "utf8",
+);
+
+const userPrompt = readFileSync(
+  join(import.meta.dir, "../prompts/user.txt"),
+  "utf8",
+);
 
 export class LlmService {
   private openai: OpenAI;
@@ -57,6 +75,8 @@ export class LlmService {
   async analyzeImage(
     image: Image,
     genId: string,
+    post: Post,
+    community: Community,
   ): Promise<ImageAnalysisResult> {
     const gidText = ascii.dim(`[${genId}]`);
 
@@ -64,22 +84,29 @@ export class LlmService {
       console.log(`${gidText} converting image to base64...`);
       const imageDataUri = await this.imageToBase64(image.url);
 
+      const systemPrompt = fillPrompt(systemTemplate, {
+        community: post.communityName,
+        communityDescription: community.about ?? "no description available",
+        title: post.title,
+      });
+
+      console.log(systemPrompt);
+
       console.log(`${gidText} sending request to llm provider...`);
       const response = await this.openai.chat.completions.create({
         model: this.model,
         stream: false,
         messages: [
           {
+            role: "system",
+            content: systemPrompt,
+          },
+          {
             role: "user",
             content: [
               {
                 type: "text",
-                text:
-                  "Generate concise alt text description for this image. " +
-                  "Focus on being clear, accurate, and brief (30-64 words). " +
-                  "Include only the most important visual elements." +
-                  "Provide a single, simple description without formatting." +
-                  "If the image is primarily textual, return the text content.",
+                text: userPrompt,
               },
               { type: "image_url", image_url: { url: imageDataUri } },
             ],
