@@ -40,11 +40,8 @@ export class DiscuitBot {
   }
 
   async startMonitoring(
-    onNewImagePost: (
-      post: Post,
-      images: Image[],
-      _comment?: Comment,
-    ) => Promise<void>,
+    onNewImagePost: (_post: Post) => Promise<void>,
+    onNewComment: (_post: Post, _comment: Comment) => Promise<void>,
   ) {
     const pollingInterval =
       process.env.NODE_ENV === "production" ? 10000 : 1000;
@@ -63,18 +60,14 @@ export class DiscuitBot {
 
     server.on(Topic.NEW_POST, async (message: Post) => {
       const post = new PostModel(this.client, message);
-      if (post.raw.type === "image") {
-        const images = post.raw.images;
-        await onNewImagePost(post.raw, images);
-      }
+      if (post.raw.type === "image") await onNewImagePost(post.raw);
     });
 
-    server.on(Topic.NEW_COMMENT, async (message: Comment) => {
-      const comment = new CommentModel(this.client, message);
-      if (!comment.raw.body.includes(config.discuit.username)) return;
-      if (comment.raw.username === config.discuit.username) return;
+    server.on(Topic.NEW_COMMENT, async (comment: Comment) => {
+      if (!comment.body.includes(config.discuit.username)) return;
+      if (comment.username === config.discuit.username) return;
 
-      const postId = comment.raw.postPublicId;
+      const postId = comment.postPublicId;
 
       const postResult = await fetch(`https://discuit.org/api/posts/${postId}`);
       const post = (await postResult.json()) as APIError | Post | null;
@@ -93,13 +86,7 @@ export class DiscuitBot {
         return;
       }
 
-      const postModel = new PostModel(this.client, post);
-      if (postModel.raw.type === "image") {
-        const images = postModel.raw.images;
-        await onNewImagePost(postModel.raw, images, comment.raw);
-      }
+      if (post.type === "image") await onNewComment(post, comment);
     });
-
-    await this.jetstream.start();
   }
 }
