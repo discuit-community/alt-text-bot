@@ -44,36 +44,40 @@ async function main() {
       images: Image[],
       _comment?: Comment,
     ) => {
-      await new Promise((res) => setTimeout(res, altTextDelayMs));
+      if (!_comment)
+        await new Promise((res) => setTimeout(res, altTextDelayMs));
 
       const post = new PostModel(bot.getClient, _post);
       const comment = _comment
         ? new CommentModel(bot.getClient, _comment)
         : null;
 
-      const [comments, commentsError] = await post.getComments();
+      if (!_comment) {
+        const [comments, commentsError] = await post.getComments();
 
-      if (commentsError) {
-        log(
-          "failed to get comments",
-          { postId: post.raw.publicId },
-          {
-            logLevel: "error",
-          },
-        );
-        return;
-      }
+        if (commentsError) {
+          log(
+            "failed to get comments",
+            { postId: post.raw.publicId },
+            {
+              logLevel: "error",
+            },
+          );
+          return;
+        }
 
-      const hasAltText = comments
-        ? comments.some((c: CommentModel) =>
-            /alt.?text|description|image description/i.test(c.raw.body),
-          )
-        : false;
-      console.log(hasAltText);
+        const hasAltText = comments
+          ? comments.some((c: CommentModel) =>
+              /alt.?text|description|image description/i.test(c.raw.body),
+            )
+          : false;
 
-      if (hasAltText) {
-        log("alt text already provided by user", { postId: post.raw.publicId });
-        return;
+        if (hasAltText) {
+          log("alt text already provided by user", {
+            postId: post.raw.publicId,
+          });
+          return;
+        }
       }
 
       const genId = Math.random().toString(36).substring(2, 15);
