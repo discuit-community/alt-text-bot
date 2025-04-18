@@ -64,7 +64,12 @@ export class DiscuitBot {
     });
 
     server.on(Topic.NEW_COMMENT, async (comment: Comment) => {
-      if (!comment.body.includes(config.discuit.username)) return;
+      if (
+        !comment.body.includes(config.discuit.username) &&
+        !/alt.?text|description|image description/i.test(comment.body)
+      )
+        return;
+
       if (comment.username === config.discuit.username) return;
 
       const postId = comment.postPublicId;

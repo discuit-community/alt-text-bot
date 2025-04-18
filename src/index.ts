@@ -14,9 +14,13 @@ import {
   PostModel,
   type Result,
 } from "@discuit-community/client";
+
 import log from "./utils/log";
 import ascii from "./utils/ascii";
 import checkConsent from "./utils/permissions";
+
+import { AltTextTracker } from "./roundup/tracker";
+import { generateWeeklyReport } from "./roundup/reports";
 
 const DEV_MODE = Bun.env.NODE_ENV === "development";
 const urls = new DiscuitUrls();
@@ -72,8 +76,8 @@ async function generateAltText(
         `want to opt out? see [here](${consentUrl}).`,
       opNotice:
         "------\n\n" +
-        `@${post.raw.username}, consider adding alt text to your future ` +
-        `posts to make them more accessible! ${altTextLink}`,
+        `*i did my best here, but let's be real—you'd probably do way ` +
+        `better than me. maybe give it a shot next time?*`,
     };
 
     const [_commentResult, _commentError] = await post.comment({
@@ -92,6 +96,11 @@ async function main() {
   try {
     const config = loadConfig();
     const altTextDelayMs = config.altTextDelayMs ?? 180_000;
+
+    const tracker = new AltTextTracker();
+    await tracker.initialize();
+
+    console.log(await generateWeeklyReport(tracker));
 
     const llm = new LlmService(config);
     const bot = new DiscuitBot(config);
@@ -113,6 +122,7 @@ async function main() {
     console.log(`logged in as @${loginResult.username}`);
 
     const handleNewImagePost = async (_post: Post) => {
+      tracker.trackImagePost(_post);
       await new Promise((res) => setTimeout(res, altTextDelayMs));
       const [genId, gidText] = genNewId();
 
@@ -168,6 +178,7 @@ async function main() {
           )
         : false;
       if (hasAltText) {
+        tracker.trackAltTextAdded(post.raw.publicId, post.raw.username, false);
         log("alt text already provided by user", {
           postId: post.raw.publicId,
         });
@@ -175,15 +186,24 @@ async function main() {
       }
 
       await generateAltText(llm, post, community, gidText, genId);
+      tracker.trackAltTextAdded(post.raw.publicId, "alttextbot", true);
     };
 
     const handleNewComment = async (_post: Post, _comment: Comment) => {
       const [genId, gidText] = genNewId();
+      console.log("New comment received:", _comment.body);
 
       // fetch things
       const comment = new CommentModel(bot.getClient, _comment);
       const post = new PostModel(bot.getClient, _post);
+
+      if (/alt.?text|description|image description/i.test(_comment.body)) {
+        tracker.trackAltTextAdded(_post.publicId, _comment.username, false);
+      }
+
       if (!post.raw.author) return;
+
+      if (!comment.raw.body.includes(`@${config.discuit.username}`)) return;
       const [community, communityError] = await fetchCommunity(
         post.raw.communityName,
       );
