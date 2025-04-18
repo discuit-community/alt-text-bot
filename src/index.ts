@@ -72,8 +72,8 @@ async function generateAltText(
         `want to opt out? see [here](${consentUrl}).`,
       opNotice:
         "------\n\n" +
-        `@${post.raw.username}, consider adding alt text to your future ` +
-        `posts to make them more accessible! ${altTextLink}`,
+        `*i did my best here, but let's be real—you'd probably do way ` +
+        `better than me. maybe give it a shot next time?*`,
     };
 
     const [_commentResult, _commentError] = await post.comment({
