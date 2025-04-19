@@ -306,8 +306,8 @@ export class AltTextTracker {
         SELECT
           COUNT(DISTINCT username) as userCount,
           COUNT(DISTINCT community) as communityCount,
-          SUM(CASE WHEN has_alt_text = 1 AND alt_text_by != 'bot' THEN 1 ELSE 0 END) as imagePostsWithAltByHumans,
-          SUM(CASE WHEN has_alt_text = 1 AND alt_text_by = 'bot' THEN 1 ELSE 0 END) as imagePostsWithAltByBot,
+          SUM(CASE WHEN has_alt_text = 1 AND alt_text_by != 'alttextbot' THEN 1 ELSE 0 END) as imagePostsWithAltByHumans,
+          SUM(CASE WHEN has_alt_text = 1 AND alt_text_by = 'alttextbot' THEN 1 ELSE 0 END) as imagePostsWithAltByBot,
           COUNT(*) as totalImagePosts
         FROM image_posts
         WHERE created_at >= $one_week_ago

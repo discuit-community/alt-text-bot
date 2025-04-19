@@ -1,5 +1,14 @@
 import type { AltTextTracker } from "./tracker";
 
+const formatPercentage = (value: number) => `${Math.round(value)}%`;
+
+function generateTable(headers: string[], rows: string[][]): string {
+  const headerRow = `| ${headers.join(" | ")} |`;
+  const separator = `| ${headers.map(() => "---").join(" | ")} |`;
+  const body = rows.map((row) => `| ${row.join(" | ")} |`).join("\n");
+  return [headerRow, separator, body].join("\n");
+}
+
 export async function generateWeeklyReport(
   tracker: AltTextTracker,
 ): Promise<string> {
@@ -11,25 +20,73 @@ export async function generateWeeklyReport(
     month: "short",
     day: "numeric",
   });
-  const dateRange = `${dateFormat.format(startDate)} - ${dateFormat.format(endDate)}`;
+  const dateRange = `${dateFormat.format(startDate)} – ${dateFormat.format(endDate)}`;
 
-  const topUsers = tracker.getTopUsersByAltTextPercentage(5);
-  const topCommunities = tracker.getTopCommunitiesByAltTextPercentage(5);
-  const mostImprovedUsers = tracker.getMostImprovedUsers(3);
-  const mostImprovedCommunities = tracker.getMostImprovedCommunities(3);
+  const title = `Alt Text Roundup — ${dateRange}`;
+
+  const topUsers = tracker.getTopUsersByAltTextPercentage(7);
+  const topCommunities = tracker.getTopCommunitiesByAltTextPercentage(7);
   const totals = tracker.getTotals();
 
-  const formatPercentage = (value: number) => `${Math.round(value)}%`;
+  // spacing helpers
+  const nbsp = " "; // unicode em space (U+2003) for indenting
+  const doubleNbsp = nbsp + nbsp;
 
-  // TODO
-  const report = "TODO.";
+  const userTable = generateTable(
+    ["User", "% Described", "Described Posts", "Total Posts"],
+    topUsers.map((u) => [
+      u.username,
+      `${Math.round(u.percentage)}%`,
+      u.count.toString(),
+      u.total.toString(),
+    ]),
+  );
+
+  const communityTable = generateTable(
+    ["Community", "% Described", "Described Posts", "Total Posts"],
+    topCommunities.map((c) => [
+      c.community,
+      `${Math.round(c.percentage)}%`,
+      c.count.toString(),
+      c.total.toString(),
+    ]),
+  );
+
+  const LINKS = {
+    alt: "https://www.perkins.org/resource/how-write-alt-text-and-image-descriptions-visually-impaired/",
+    optin:
+      "https://github.com/discuit-community/alt-text-bot/blob/main/CONSENT.md",
+    roundups: "https://discuit.org/@alttextbot/lists/roundup",
+  };
+
+  let report = "";
+
+  report += `# ${title}\n`;
+  report += `PLACEHOLDER\n\n`;
+  report += `${nbsp}\n\n`;
+  report += `**This week’s snapshot:**\n\n`;
+  report += `${nbsp}📸 **${totals.totalImagePosts} image posts** from **${totals.userCount} users** across **${totals.communityCount} communities**\n\n`;
+  const altTotal =
+    totals.imagePostsWithAltByHumans + totals.imagePostsWithAltByBot;
+  const altPercent = Math.round(
+    (altTotal / (totals.totalImagePosts || 1)) * 100,
+  );
+  report += `${nbsp}✨ **${altTotal} posts (${altPercent}%)** had alt text (${totals.imagePostsWithAltByHumans} added by humans, ${totals.imagePostsWithAltByBot} by altbot)\n\n`;
+  report += `${nbsp}\n\n`;
+
+  report += `## 🏆 Top Contributors\n\n`;
+  report += userTable + "\n\n";
+  report += `## 🏡 Top Communities\n\n`;
+  report += communityTable + "\n\n";
+  report += `${nbsp}\n\n`;
+
+  report += `PLACEHOLDER\n\n`;
+  report += `${nbsp}\n\n`;
+  report += `[what is alt text?](${LINKS.alt}) | [opt-in to alttextbot](${LINKS.optin}) | [all weekly roundups](${LINKS.roundups})\n`;
 
   tracker.saveWeeklyReport({
-    dateRange,
     topUsers,
     topCommunities,
-    mostImprovedUsers,
-    mostImprovedCommunities,
     totals,
   });
 
