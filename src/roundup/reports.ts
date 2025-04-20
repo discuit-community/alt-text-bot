@@ -1,6 +1,12 @@
 import type { AltTextTracker } from "./tracker";
 
 const formatPercentage = (value: number) => `${Math.round(value)}%`;
+const LINKS = {
+  alt: "https://www.perkins.org/resource/how-write-alt-text-and-image-descriptions-visually-impaired/",
+  optin:
+    "https://github.com/discuit-community/alt-text-bot/blob/main/CONSENT.md",
+  roundups: "https://discuit.org/@alttextbot/lists/roundup",
+};
 
 function generateTable(headers: string[], rows: string[][]): string {
   const headerRow = `| ${headers.join(" | ")} |`;
@@ -28,9 +34,7 @@ export async function generateWeeklyReport(
   const topCommunities = tracker.getTopCommunitiesByAltTextPercentage(7);
   const totals = tracker.getTotals();
 
-  // spacing helpers
   const nbsp = " "; // unicode em space (U+2003) for indenting
-  const doubleNbsp = nbsp + nbsp;
 
   const userTable = generateTable(
     ["User", "% Described", "Described Posts", "Total Posts"],
@@ -52,15 +56,7 @@ export async function generateWeeklyReport(
     ]),
   );
 
-  const LINKS = {
-    alt: "https://www.perkins.org/resource/how-write-alt-text-and-image-descriptions-visually-impaired/",
-    optin:
-      "https://github.com/discuit-community/alt-text-bot/blob/main/CONSENT.md",
-    roundups: "https://discuit.org/@alttextbot/lists/roundup",
-  };
-
   let report = "";
-
   report += `# ${title}\n`;
   report += `PLACEHOLDER\n\n`;
   report += `${nbsp}\n\n`;
@@ -89,6 +85,39 @@ export async function generateWeeklyReport(
     topCommunities,
     totals,
   });
+
+  return report;
+}
+
+export async function generateDailyReport(
+  tracker: AltTextTracker,
+): Promise<string> {
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - 1);
+
+  const dateFormat = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+  const dateRange = `${dateFormat.format(startDate)} – ${dateFormat.format(endDate)}`;
+
+  const totals = tracker.getTotalsForRange(startDate, endDate);
+
+  const altTotal =
+    totals.imagePostsWithAltByHumans + totals.imagePostsWithAltByBot;
+  const altPercent = Math.round(
+    (altTotal / (totals.totalImagePosts || 1)) * 100,
+  );
+
+  let report = "";
+  report += `# 📅 Daily Accessibility Report (${dateRange})\n\n`;
+  report += `**image posts:** ${totals.totalImagePosts}\n\n`;
+  report += `**with alt text:** ${altTotal} (${altPercent}%)\n`;
+  report += ` • by humans: ${totals.imagePostsWithAltByHumans}\n\n`;
+  report += ` • by alttextbot: ${totals.imagePostsWithAltByBot}\n\n`;
+  report += `**without alt text:** ${totals.totalImagePosts - altTotal}\n\n`;
+  report += `this is an automated post | [what is alt text?](${LINKS.alt}) | [opt-in to alttextbot](${LINKS.optin})\n`;
 
   return report;
 }

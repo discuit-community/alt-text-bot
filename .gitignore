@@ -2,6 +2,7 @@
 .altbotrc*json
 **.sqlite
 ROUNDUP.md
+DAILY_REPORT.md
 
 # Logs
 

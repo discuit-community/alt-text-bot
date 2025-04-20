@@ -66,11 +66,12 @@ export class AltTextTracker {
         VALUES ($id, $username, $community, $created_at)
       `);
 
+    const postCreatedAt = new Date(post.createdAt);
     stmt.run({
       $id: post.publicId,
       $username: post.username,
       $community: post.communityName,
-      $created_at: Math.floor(Date.now() / 1000),
+      $created_at: postCreatedAt.getTime(),
     });
 
     this.trackUser(post.username);
@@ -80,6 +81,7 @@ export class AltTextTracker {
   trackAltTextAdded(
     postId: string,
     addedBy: string,
+    time: Date,
     isBot: boolean = false,
   ): void {
     const stmt = this.db.query(`
@@ -93,7 +95,7 @@ export class AltTextTracker {
     stmt.all({
       $id: postId,
       $added_by: isBot ? "bot" : addedBy,
-      $added_at: Math.floor(Date.now() / 1000),
+      $added_at: time.getTime(),
     });
   }
 
@@ -315,6 +317,31 @@ export class AltTextTracker {
       )
       .get({
         $one_week_ago: oneWeekAgo,
+      }) as UsageStats;
+
+    return result;
+  }
+
+  getTotalsForRange(start: Date, end: Date): UsageStats {
+    const startTs = Math.floor(start.getTime() / 1000);
+    const endTs = Math.floor(end.getTime() / 1000);
+
+    const result = this.db
+      .query(
+        `
+        SELECT
+          COUNT(DISTINCT username) as userCount,
+          COUNT(DISTINCT community) as communityCount,
+          SUM(CASE WHEN has_alt_text = 1 AND alt_text_by != 'alttextbot' THEN 1 ELSE 0 END) as imagePostsWithAltByHumans,
+          SUM(CASE WHEN has_alt_text = 1 AND alt_text_by = 'alttextbot' THEN 1 ELSE 0 END) as imagePostsWithAltByBot,
+          COUNT(*) as totalImagePosts
+        FROM image_posts
+        WHERE created_at >= $start AND created_at < $end
+      `,
+      )
+      .get({
+        $start: startTs,
+        $end: endTs,
       }) as UsageStats;
 
     return result;

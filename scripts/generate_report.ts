@@ -67,10 +67,18 @@ async function processPosts(
         batchTotal++;
         if (key === "manual") {
           batchManual++;
-          tracker.trackAltTextAdded(post.raw.publicId, altComment.raw.username);
+          tracker.trackAltTextAdded(
+            post.raw.publicId,
+            altComment.raw.username,
+            new Date(altComment.raw.createdAt),
+          );
         } else {
           batchAutomated++;
-          tracker.trackAltTextAdded(post.raw.publicId, "alttextbot");
+          tracker.trackAltTextAdded(
+            post.raw.publicId,
+            "alttextbot",
+            new Date(altComment.raw.createdAt),
+          );
         }
         allPosts.push({ post, comment: altComment });
       } else {
