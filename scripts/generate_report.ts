@@ -42,6 +42,12 @@ async function processPosts(
   let batchManual = 0;
   let batchAutomated = 0;
 
+  const logProcessing = (message: string) => {
+    process.stdout.clearLine(0);
+    process.stdout.cursorTo(0);
+    process.stdout.write(`${message}`);
+  };
+
   await Promise.all(
     posts.map(async (post) => {
       tracker.trackImagePost(post.raw);
@@ -52,15 +58,20 @@ async function processPosts(
         return null;
       }
 
+      const username = String(post.raw.username).trim();
       const altComment = comments.find((comment) => alt(comment.raw.body));
-      const title = truncate(post.raw.title);
-      const dateStr = new Date(post.raw.createdAt).toISOString();
+      const escapeStr = (str: string) =>
+        str.replace(/[\\_\x00-\x1f\x7f-\x9f]/g, (ch) => "");
+      const title = truncate(escapeStr(post.raw.title));
+      const dateStr = new Date(post.raw.createdAt)
+        .toLocaleString()
+        .padStart(24, " ");
 
       if (altComment) {
         const key =
           altComment.raw.username === "alttextbot" ? "automated" : "manual";
-        process.stdout.write(
-          `processing: ${dateStr} | ${ascii.green("✔")} ${title} by ${post.raw.username}${" ".repeat(20)}\r`,
+        logProcessing(
+          `${dateStr} | ${ascii.green("✔")} "${title}" by @${username}`,
         );
         stats.total++;
         stats[key]++;
@@ -82,13 +93,24 @@ async function processPosts(
         }
         allPosts.push({ post, comment: altComment });
       } else {
-        process.stdout.write(
-          `processing: ${dateStr} | ${ascii.red("✘")} ${title} by ${post.raw.username}${" ".repeat(20)}\r`,
+        logProcessing(
+          `${dateStr} | ${ascii.red("✘")} "${title}" by @${username}`,
         );
         batchTotal++;
         allPosts.push({ post, comment: null });
       }
     }),
+  );
+
+  const dateStr = new Date().toLocaleString().padStart(24, " ");
+  const percentageDescribed = (
+    ((batchManual + batchAutomated) / batchTotal) *
+    100
+  ).toFixed(2);
+  const percentageAutomated = ((batchAutomated / batchTotal) * 100).toFixed(2);
+
+  logProcessing(
+    `${dateStr} | ${ascii.green("✔")} ${percentageDescribed}% of posts have alt text (${percentageAutomated}% automated)`,
   );
 }
 
