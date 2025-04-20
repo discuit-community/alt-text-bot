@@ -226,9 +226,11 @@ async function main() {
         ? { user: true, community: true }
         : checkConsent(post.raw.author, community);
 
-      if (!consent.user) {
+      if (!consent.user && comment.raw.username !== post.raw.username) {
+        const optInUrl =
+          "https://github.com/discuit-community/alt-text-bot/blob/main/CONSENT.md";
         await comment.reply(
-          `@${post.raw.username} has not opted into alt text generation.`,
+          `@${post.raw.username} has not opted into alt text generation, but they can opt in [here](${optInUrl}).`,
         );
         return;
       }
