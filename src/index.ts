@@ -100,8 +100,6 @@ async function main() {
     const tracker = new AltTextTracker();
     await tracker.initialize();
 
-    console.log(await generateWeeklyReport(tracker));
-
     const llm = new LlmService(config);
     const bot = new DiscuitBot(config);
 
