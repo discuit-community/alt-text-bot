@@ -176,7 +176,12 @@ async function main() {
           )
         : false;
       if (hasAltText) {
-        tracker.trackAltTextAdded(post.raw.publicId, post.raw.username, false);
+        tracker.trackAltTextAdded(
+          post.raw.publicId,
+          post.raw.username,
+          new Date(),
+          false,
+        );
         log("alt text already provided by user", {
           postId: post.raw.publicId,
         });
@@ -184,7 +189,12 @@ async function main() {
       }
 
       await generateAltText(llm, post, community, gidText, genId);
-      tracker.trackAltTextAdded(post.raw.publicId, "alttextbot", true);
+      tracker.trackAltTextAdded(
+        post.raw.publicId,
+        "alttextbot",
+        new Date(),
+        true,
+      );
     };
 
     const handleNewComment = async (_post: Post, _comment: Comment) => {
@@ -196,7 +206,12 @@ async function main() {
       const post = new PostModel(bot.getClient, _post);
 
       if (/alt.?text|description|image description/i.test(_comment.body)) {
-        tracker.trackAltTextAdded(_post.publicId, _comment.username, false);
+        tracker.trackAltTextAdded(
+          _post.publicId,
+          _comment.username,
+          new Date(_comment.createdAt),
+          false,
+        );
       }
 
       if (!post.raw.author) return;
