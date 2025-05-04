@@ -15,9 +15,25 @@ const truncate = (s: string, len = 25) =>
   s.length > len ? `${s.substring(0, len)}...` : s;
 const alt = (text: string) => ALT_TEXT_REGEX.test(text);
 
-const START_DATE = new Date("2025-04-19T01:41:58Z");
-const END_DATE = new Date();
-const MAX_POSTS = 500;
+function parseDate(str: string | undefined, fallback: Date): Date {
+  if (!str) return fallback;
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return fallback;
+  return d;
+}
+
+function parseIntOr(str: string | undefined, fallback: number): number {
+  const n = parseInt(str ?? "");
+  return isNaN(n) ? fallback : n;
+}
+
+const args = process.argv.slice(2);
+const now = new Date();
+const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+const START_DATE = parseDate(args[0], yesterday);
+const END_DATE = parseDate(args[1], now);
+const MAX_POSTS = parseIntOr(args[2], 500);
 
 async function printSummary(total: number, withAlt: AltTextStats) {
   const percent = (withAlt.total / total) * 100;

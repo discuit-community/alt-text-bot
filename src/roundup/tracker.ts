@@ -10,6 +10,40 @@ type UsageStats = {
   totalImagePosts: number;
 };
 
+export interface PostStats {
+  id: string;
+  username: string;
+  community: string;
+  created_at: number;
+  has_alt_text: number;
+  alt_text_by: string | null;
+  alt_text_added_at: number | null;
+}
+
+export interface TrackerStats {
+  totalPosts: number;
+  postsWithAltText: number;
+  postsWithoutAltText: number;
+  userStats: {
+    totalUsers: number;
+    topContributors: Array<{
+      username: string;
+      percentage: number;
+      count: number;
+      total: number;
+    }>;
+  };
+  communityStats: {
+    totalCommunities: number;
+    topCommunities: Array<{
+      community: string;
+      percentage: number;
+      count: number;
+      total: number;
+    }>;
+  };
+}
+
 export class AltTextTracker {
   private db: Database;
   private initialized = false;
@@ -323,8 +357,8 @@ export class AltTextTracker {
   }
 
   getTotalsForRange(start: Date, end: Date): UsageStats {
-    const startTs = Math.floor(start.getTime() / 1000);
-    const endTs = Math.floor(end.getTime() / 1000);
+    const startTs = Math.floor(start.getTime());
+    const endTs = Math.floor(end.getTime());
 
     const result = this.db
       .query(
@@ -362,5 +396,109 @@ export class AltTextTracker {
         $week_start: weekStart,
         $stats: JSON.stringify(stats),
       });
+  }
+
+  // API support methods
+  async getStats(): Promise<TrackerStats> {
+    const topUsers = this.getTopUsersByAltTextPercentage(10);
+    const topCommunities = this.getTopCommunitiesByAltTextPercentage(10);
+
+    const postsStatsQuery = this.db.query(`
+      SELECT
+        COUNT(*) as totalPosts,
+        SUM(CASE WHEN has_alt_text = 1 THEN 1 ELSE 0 END) as postsWithAltText,
+        SUM(CASE WHEN has_alt_text = 0 THEN 1 ELSE 0 END) as postsWithoutAltText
+      FROM image_posts
+    `);
+
+    const postsStats = postsStatsQuery.get() as {
+      totalPosts: number;
+      postsWithAltText: number;
+      postsWithoutAltText: number;
+    };
+
+    const userCountQuery = this.db.query(`
+      SELECT COUNT(*) as totalUsers FROM users
+    `);
+    const userCount = (userCountQuery.get() as { totalUsers: number })
+      .totalUsers;
+
+    const communityCountQuery = this.db.query(`
+      SELECT COUNT(*) as totalCommunities FROM communities
+    `);
+    const communityCount = (
+      communityCountQuery.get() as { totalCommunities: number }
+    ).totalCommunities;
+
+    return {
+      ...postsStats,
+      userStats: {
+        totalUsers: userCount,
+        topContributors: topUsers,
+      },
+      communityStats: {
+        totalCommunities: communityCount,
+        topCommunities: topCommunities,
+      },
+    };
+  }
+
+  async getAllPosts(
+    limit: number = 100,
+    offset: number = 0,
+  ): Promise<PostStats[]> {
+    const query = this.db.query(`
+      SELECT
+        id, username, community, created_at,
+        has_alt_text, alt_text_by, alt_text_added_at
+      FROM image_posts
+      ORDER BY created_at DESC
+      LIMIT $limit OFFSET $offset
+    `);
+
+    return query.all({
+      $limit: limit,
+      $offset: offset,
+    }) as PostStats[];
+  }
+
+  async getPostsByUser(
+    username: string,
+    limit: number = 50,
+  ): Promise<PostStats[]> {
+    const query = this.db.query(`
+      SELECT
+        id, username, community, created_at,
+        has_alt_text, alt_text_by, alt_text_added_at
+      FROM image_posts
+      WHERE username = $username
+      ORDER BY created_at DESC
+      LIMIT $limit
+    `);
+
+    return query.all({
+      $username: username,
+      $limit: limit,
+    }) as PostStats[];
+  }
+
+  async getPostsByCommunity(
+    community: string,
+    limit: number = 50,
+  ): Promise<PostStats[]> {
+    const query = this.db.query(`
+      SELECT
+        id, username, community, created_at,
+        has_alt_text, alt_text_by, alt_text_added_at
+      FROM image_posts
+      WHERE community = $community
+      ORDER BY created_at DESC
+      LIMIT $limit
+    `);
+
+    return query.all({
+      $community: community,
+      $limit: limit,
+    }) as PostStats[];
   }
 }

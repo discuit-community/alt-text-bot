@@ -34,51 +34,83 @@ export async function generateWeeklyReport(
   const topCommunities = tracker.getTopCommunitiesByAltTextPercentage(7);
   const totals = tracker.getTotals();
 
-  const nbsp = " "; // unicode em space (U+2003) for indenting
+  const snapshotSection = () => {
+    const a = totals.totalImagePosts,
+      b = totals.userCount,
+      c = totals.communityCount;
 
-  const userTable = generateTable(
-    ["User", "% Described", "Described Posts", "Total Posts"],
-    topUsers.map((u) => [
-      u.username,
-      `${Math.round(u.percentage)}%`,
-      u.count.toString(),
-      u.total.toString(),
-    ]),
-  );
+    const d = totals.imagePostsWithAltByHumans + totals.imagePostsWithAltByBot,
+      e = Math.round((d / (totals.totalImagePosts || 1)) * 100),
+      f = totals.imagePostsWithAltByHumans,
+      g = totals.imagePostsWithAltByBot;
 
-  const communityTable = generateTable(
-    ["Community", "% Described", "Described Posts", "Total Posts"],
-    topCommunities.map((c) => [
-      c.community,
-      `${Math.round(c.percentage)}%`,
-      c.count.toString(),
-      c.total.toString(),
-    ]),
-  );
+    return (
+      `**This week’s snapshot:**\n\n` +
+      ` 📸 **${a} image posts** from **${b} users** across **${c} communities**` +
+      `\n\n` +
+      ` ✨ **${d} posts (${e}%)** had alt text (${f} added by humans, ${g} by altbot)` +
+      `\n\n`
+    );
+  };
 
-  let report = "";
-  report += `# ${title}\n`;
-  report += `PLACEHOLDER\n\n`;
-  report += `${nbsp}\n\n`;
-  report += `**This week’s snapshot:**\n\n`;
-  report += `${nbsp}📸 **${totals.totalImagePosts} image posts** from **${totals.userCount} users** across **${totals.communityCount} communities**\n\n`;
-  const altTotal =
-    totals.imagePostsWithAltByHumans + totals.imagePostsWithAltByBot;
-  const altPercent = Math.round(
-    (altTotal / (totals.totalImagePosts || 1)) * 100,
-  );
-  report += `${nbsp}✨ **${altTotal} posts (${altPercent}%)** had alt text (${totals.imagePostsWithAltByHumans} added by humans, ${totals.imagePostsWithAltByBot} by altbot)\n\n`;
-  report += `${nbsp}\n\n`;
+  const leaderboardSection = (): string => {
+    const tables = {
+      users: {
+        title: "Top Users",
+        table: generateTable(
+          ["User", "% Described", "# Described", "Total Posts"],
+          topUsers.map((u) => [
+            u.username,
+            `${Math.round(u.percentage)}%`,
+            u.count.toString(),
+            u.total.toString(),
+          ]),
+        ),
+      },
+      communities: {
+        title: "Top Communities",
+        table: generateTable(
+          ["Community", "% Described", "# Described", "Total Posts"],
+          topCommunities.map((c) => [
+            c.community,
+            `${Math.round(c.percentage)}%`,
+            c.count.toString(),
+            c.total.toString(),
+          ]),
+        ),
+      },
+    };
 
-  report += `## 🏆 Top Contributors\n\n`;
-  report += userTable + "\n\n";
-  report += `## 🏡 Top Communities\n\n`;
-  report += communityTable + "\n\n";
-  report += `${nbsp}\n\n`;
+    const leaderboardString = Object.entries(tables)
+      .map(([_key, value]) => {
+        return `## ${value.title}\n${value.table}\n\n`;
+      })
+      .join("");
 
-  report += `PLACEHOLDER\n\n`;
-  report += `${nbsp}\n\n`;
-  report += `[what is alt text?](${LINKS.alt}) | [opt-in to alttextbot](${LINKS.optin}) | [all weekly roundups](${LINKS.roundups})\n`;
+    return leaderboardString;
+  };
+
+  const linksSection = () => {
+    const links = [
+      { name: "what is alt text?", url: LINKS.alt },
+      { name: "opt-in to alttextbot", url: LINKS.optin },
+      { name: "all weekly roundups", url: LINKS.roundups },
+    ];
+
+    const linkVariables = links
+      .map((link) => `[${link.name}]: ${link.url}`)
+      .join("\n");
+
+    const linkSection = `${links.map((link) => `[${link.name}]`).join(" | ")}\n\n${linkVariables}\n\n`;
+    return linkSection;
+  };
+
+  const report =
+    `<PLACEHOLDER - add text here>\n\n---\n` +
+    snapshotSection() +
+    leaderboardSection() +
+    linksSection() +
+    "\n\n";
 
   tracker.saveWeeklyReport({
     topUsers,
@@ -110,14 +142,25 @@ export async function generateDailyReport(
     (altTotal / (totals.totalImagePosts || 1)) * 100,
   );
 
-  let report = "";
-  report += `# 📅 Daily Accessibility Report (${dateRange})\n\n`;
-  report += `**image posts:** ${totals.totalImagePosts}\n\n`;
-  report += `**with alt text:** ${altTotal} (${altPercent}%)\n`;
-  report += ` • by humans: ${totals.imagePostsWithAltByHumans}\n\n`;
-  report += ` • by alttextbot: ${totals.imagePostsWithAltByBot}\n\n`;
-  report += `**without alt text:** ${totals.totalImagePosts - altTotal}\n\n`;
-  report += `this is an automated post | [what is alt text?](${LINKS.alt}) | [opt-in to alttextbot](${LINKS.optin})\n`;
+  const links = [
+    { name: "what is alt text?", url: LINKS.alt },
+    { name: "opt-in to alttextbot", url: LINKS.optin },
+  ];
+
+  let report =
+    `Daily Roundup - ${dateRange}\n\n` +
+    `**Image posts:** ${totals.totalImagePosts}\n\n` +
+    ` **With alt text:** ${altTotal} (${altPercent}%)\n\n` +
+    `  • By humans: ${totals.imagePostsWithAltByHumans}\n\n` +
+    `  • By alttextbot: ${totals.imagePostsWithAltByBot}\n\n` +
+    ` **Without alt text:** ${totals.totalImagePosts - altTotal}\n\n\n` +
+    `this is a post | ${links.map((link) => `[${link.name}]`).join(" | ")}\n\n\n\n`;
+
+  const linkVariables = links
+    .map((link) => `[${link.name}]: ${link.url}`)
+    .join("\n");
+
+  report += linkVariables;
 
   return report;
 }
