@@ -20,7 +20,6 @@ import ascii from "./utils/ascii";
 import checkConsent from "./utils/permissions";
 
 import { AltTextTracker } from "./roundup/tracker";
-import { generateWeeklyReport } from "./roundup/reports";
 
 const DEV_MODE = Bun.env.NODE_ENV === "development";
 const urls = new DiscuitUrls();
@@ -151,6 +150,12 @@ async function main() {
         return;
       }
 
+      const hasAltTextInImages = post.raw.images.some(
+        // @ts-expect-error the `altText` field has not yet been added to
+        // @discuit-community/types, but it does exist.
+        (img) => img.altText != null,
+      );
+
       const [comments, commentsError] = await post.getComments();
       if (commentsError) {
         console.error(
@@ -170,12 +175,13 @@ async function main() {
         return;
       }
 
-      const hasAltText = comments
+      const hasAltTextInComments = comments
         ? comments.some((c: CommentModel) =>
             /alt.?text|description|image description/i.test(c.raw.body),
           )
         : false;
-      if (hasAltText) {
+
+      if (hasAltTextInComments || hasAltTextInImages) {
         tracker.trackAltTextAdded(
           post.raw.publicId,
           post.raw.username,
