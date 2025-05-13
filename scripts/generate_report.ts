@@ -76,6 +76,12 @@ async function processPosts(
 
       const username = String(post.raw.username).trim();
       const altComment = comments.find((comment) => alt(comment.raw.body));
+      const hasAltTextInImages = post.raw.images.some(
+        // @ts-expect-error the `altText` field has not yet been added to
+        // @discuit-community/types, but it does exist.
+        (img) => img.altText != null,
+      );
+
       const escapeStr = (str: string) =>
         str.replace(/[\\_\x00-\x1f\x7f-\x9f]/g, (ch) => "");
       const title = truncate(escapeStr(post.raw.title));
@@ -83,9 +89,20 @@ async function processPosts(
         .toLocaleString()
         .padStart(24, " ");
 
-      if (altComment) {
-        const key =
-          altComment.raw.username === "alttextbot" ? "automated" : "manual";
+      if (altComment || hasAltTextInImages) {
+        const key = altComment
+          ? altComment.raw.username === "alttextbot"
+            ? "automated"
+            : "manual"
+          : "manual";
+
+        const username = altComment
+          ? altComment.raw.username
+          : post.raw.username;
+        const timestamp = altComment
+          ? new Date(altComment.raw.createdAt)
+          : new Date(post.raw.createdAt);
+
         logProcessing(
           `${dateStr} | ${ascii.green("✔")} "${title}" by @${username}`,
         );
@@ -96,18 +113,18 @@ async function processPosts(
           batchManual++;
           tracker.trackAltTextAdded(
             post.raw.publicId,
-            altComment.raw.username,
-            new Date(altComment.raw.createdAt),
+            username,
+            new Date(timestamp),
           );
         } else {
           batchAutomated++;
           tracker.trackAltTextAdded(
             post.raw.publicId,
             "alttextbot",
-            new Date(altComment.raw.createdAt),
+            new Date(timestamp),
           );
         }
-        allPosts.push({ post, comment: altComment });
+        allPosts.push({ post, comment: altComment || null });
       } else {
         logProcessing(
           `${dateStr} | ${ascii.red("✘")} "${title}" by @${username}`,
