@@ -151,8 +151,6 @@ async function main() {
       }
 
       const hasAltTextInImages = post.raw.images.some(
-        // @ts-expect-error the `altText` field has not yet been added to
-        // @discuit-community/types, but it does exist.
         (img) => img.altText != null,
       );
 
