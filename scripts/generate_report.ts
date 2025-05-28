@@ -1,5 +1,5 @@
 import DiscuitClient, {
-  PostModel,
+  type PostModel,
   type CommentModel,
 } from "@discuit-community/client";
 import fs from "node:fs";
@@ -18,13 +18,13 @@ const alt = (text: string) => ALT_TEXT_REGEX.test(text);
 function parseDate(str: string | undefined, fallback: Date): Date {
   if (!str) return fallback;
   const d = new Date(str);
-  if (isNaN(d.getTime())) return fallback;
+  if (Number.isNaN(d.getTime())) return fallback;
   return d;
 }
 
 function parseIntOr(str: string | undefined, fallback: number): number {
-  const n = parseInt(str ?? "");
-  return isNaN(n) ? fallback : n;
+  const n = Number.parseInt(str ?? "");
+  return Number.isNaN(n) ? fallback : n;
 }
 
 const args = process.argv.slice(2);
@@ -77,8 +77,6 @@ async function processPosts(
       const username = String(post.raw.username).trim();
       const altComment = comments.find((comment) => alt(comment.raw.body));
       const hasAltTextInImages = post.raw.images.some(
-        // @ts-expect-error the `altText` field has not yet been added to
-        // @discuit-community/types, but it does exist.
         (img) => img.altText != null,
       );
 

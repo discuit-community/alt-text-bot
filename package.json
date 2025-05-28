@@ -16,9 +16,9 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@discuit-community/client": "^0.4.0",
+    "@discuit-community/client": "^0.4.1",
     "@discuit-community/jetstream": "^1.0.0",
     "@discuit-community/types": "^0.1.1",
-    "openai": "^4.95.1"
+    "openai": "^4.103.0"
   }
 }
