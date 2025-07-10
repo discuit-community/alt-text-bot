@@ -1,20 +1,23 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import OpenAI from "openai";
-
-import { type Config } from "./utils/config";
-import type { ImageAnalysisResult } from "./types";
 import type { Community, Image, Post } from "@discuit-community/types";
-
-import log from "./utils/log";
+import OpenAI from "openai";
+import type { ImageAnalysisResult } from "./types";
 import ascii from "./utils/ascii";
+import type { Config } from "./utils/config";
+import log from "./utils/log";
 
 function fillPrompt(template: string, vars: Record<string, string>) {
   return template.replace(/{{(.*?)}}/g, (_, key) => vars[key.trim()] ?? "");
 }
 
-const systemTemplate = readFileSync(
+const systemTemplateA = readFileSync(
   join(import.meta.dir, "../prompts/system.txt"),
+  "utf8",
+);
+
+const systemTemplateB = readFileSync(
+  join(import.meta.dir, "../prompts/system_b.txt"),
   "utf8",
 );
 
@@ -77,6 +80,7 @@ export class LlmService {
     genId: string,
     post: Post,
     community: Community,
+    promptVariant: "A" | "B" = "A",
   ): Promise<ImageAnalysisResult> {
     const gidText = ascii.dim(`[${genId}]`);
 
@@ -84,11 +88,14 @@ export class LlmService {
       console.log(`${gidText} converting image to base64...`);
       const imageDataUri = await this.imageToBase64(image.url);
 
-      const systemPrompt = fillPrompt(systemTemplate, {
-        community: post.communityName,
-        communityDescription: community.about ?? "no description available",
-        title: post.title,
-      });
+      const systemPrompt = fillPrompt(
+        promptVariant === "A" ? systemTemplateA : systemTemplateB,
+        {
+          community: post.communityName,
+          communityDescription: community.about ?? "no description available",
+          title: post.title,
+        },
+      );
 
       console.log(`${gidText} sending request to llm provider...`);
       const response = await this.openai.chat.completions.create({

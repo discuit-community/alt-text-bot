@@ -1,11 +1,10 @@
 import {
-  CommentModel,
   DiscuitClient,
   PostModel,
   type Result,
 } from "@discuit-community/client";
 import { Jetstream, Topic } from "@discuit-community/jetstream";
-import type { Comment, Post, Image, User } from "@discuit-community/types";
+import type { Comment, Post, User } from "@discuit-community/types";
 import type { APIError } from "openai";
 
 import { type Config, loadConfig } from "./utils/config";
